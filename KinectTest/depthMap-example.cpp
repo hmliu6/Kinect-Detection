@@ -81,6 +81,7 @@ int main(int argc, char** argv){
 		if (pFrameReader->AcquireLatestFrame(&pFrame) == S_OK){
 			// S_OK = execute successfully
 			// E_PENDING = not ready for retrieving data
+			// We may add timer to prevent busy waiting in state E_PENDING
 
 			// Copy the depth map to cv::Mat mDepthImg object
 			pFrame->CopyFrameDataToArray(iWidth * iHeight,
