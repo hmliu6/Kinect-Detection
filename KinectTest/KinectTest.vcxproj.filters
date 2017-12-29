@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="colorMap-example.cpp">
+    <ClCompile Include="depthMap-example.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
