@@ -90,6 +90,7 @@ int main(int argc, char** argv){
 
 	// Prepare OpenCV data
 	cv::Mat	mImg(iHeight, iWidth, CV_8UC4);
+	cv::Mat	mirrored(iHeight, iWidth, CV_8UC4);
 	UINT uBufferSize = iHeight * iWidth * 4 * sizeof(BYTE);
 	cv::namedWindow("Color Map");
 
@@ -101,7 +102,8 @@ int main(int argc, char** argv){
 		if (pFrameReader->AcquireLatestFrame(&pFrame) == S_OK){
 			// Copy to OpenCV image
 			if (pFrame->CopyConvertedFrameDataToArray(uBufferSize, mImg.data, ColorImageFormat_Bgra) == S_OK){
-				cv::imshow("Color Map", mImg);
+				cv::flip(mImg, mirrored, 1);
+				cv::imshow("Color Map", mirrored);
 			}
 			else{
 				cerr << "Data copy error" << endl;

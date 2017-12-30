@@ -10,13 +10,14 @@ int main()
 {
 	char fileName[] = "C:\\\\robocon\\test-image\\index.jpg";
 	cout << fileName << endl;
-	IplImage *image;
-	image = cvLoadImage(fileName, CV_LOAD_IMAGE_UNCHANGED);
+	IplImage *rawImage;
+	rawImage = cvLoadImage(fileName, CV_LOAD_IMAGE_UNCHANGED);
 
-	if (!image)
-		cout << "cannot find document!!!" << endl;
+	if (!rawImage)
+		cout << "Cannot find document!!!" << endl;
 	else
-	{
+	{	
+		IplImage *image = cvtColor(rawImage, cv2.COLOR_BGR2GRAY);
 		cvShowImage("Test", image);
 		cvWaitKey(0);
 	}
