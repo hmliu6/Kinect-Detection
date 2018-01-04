@@ -92,6 +92,7 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
 	}
 	else
 		cout << "Cannot locate x coordinate" << endl;
+	free(rowWhiteNumber);
 
     int listOfHeight = 0, countList = 0;
     bool blackZone = false;
@@ -147,6 +148,8 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
 	cout << "{ " << centre.x << ", " << centre.y << " }" << endl;
 	cout << "Radius: " << largestRadius << endl;
     // circle(rawImage, centre, largestRadius, CV_RGB(255, 255, 255), 3);
+	free(whitePoints[0]);
+	free(whitePoints[1]);
 }
 
 void preFiltering(cv::Mat rawImage, int lowerColorRange) {
@@ -157,8 +160,6 @@ void preFiltering(cv::Mat rawImage, int lowerColorRange) {
 	whitePoints[0] = (int *)malloc(10000 * sizeof(int));
 	// whitePoints[1] = set of x-coordinates
 	whitePoints[1] = (int *)malloc(10000 * sizeof(int));
-	// After opening files, convert to greyscale and pass to processing function
-	// cvtColor(rawImage, image, COLOR_BGR2GRAY);
 	// Filter out unrelated pixels
 	for(int j=0; j<image.cols; j++){
 		for(int i=0; i<image.rows; i++){
@@ -228,7 +229,7 @@ void returnKinect() {
 }
 
 int main(int argc, char** argv){
-	int lowerColor;
+	int lowerColor, key_pressed;
 	int imageNumber = 1;
 	kinectInit();
 
@@ -275,7 +276,7 @@ int main(int argc, char** argv){
 			pFrame->Release();
 		}
 
-		int key_pressed = cv::waitKey(30);
+		key_pressed = cv::waitKey(30);
 
 		// Break when enter pressed
 		if (key_pressed == VK_RETURN) {
