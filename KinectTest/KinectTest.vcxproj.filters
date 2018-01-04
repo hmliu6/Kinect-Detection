@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="depthMap-example.cpp">
+    <ClCompile Include="kinect-filtering-dynamic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

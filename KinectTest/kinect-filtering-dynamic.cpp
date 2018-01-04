@@ -1,5 +1,6 @@
 // Standard Library
 #include <iostream>
+#include <string>
 
 // OpenCV Header
 #include <opencv2/core.hpp>
@@ -24,6 +25,7 @@ const int kinectHeight = 1800;
 const int fenceToKinect = 3000;
 const int tolerance = 200;
 const int maxDepthRange = 8000;
+const int rodLength = 30;
 
 // Calculate minimum meaningful colour range
 void colorCalculation(int *lowerColor){
@@ -82,12 +84,14 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
         }
     }
 
-    if(rowWhiteCount > 0){
-        for(int i=0; i<rowWhiteCount; i++)
-            centre.x += rowWhiteNumber[i];
-        // Take sum of average to become x-coordinate of centre
-        centre.x = int(centre.x / rowWhiteCount);
-    }
+	if (rowWhiteCount > 0) {
+		for (int i = 0; i < rowWhiteCount; i++)
+			centre.x += rowWhiteNumber[i];
+		// Take sum of average to become x-coordinate of centre
+		centre.x = int(centre.x / rowWhiteCount);
+	}
+	else
+		cout << "Cannot locate x coordinate" << endl;
 
     int listOfHeight = 0, countList = 0;
     bool blackZone = false;
@@ -113,8 +117,11 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
         }
     }
     // Take sum of average to get y-coordinate of centre
-    if(countList > 0)
-        centre.y = int(listOfHeight / countList);
+	if (countList > 0) {
+		centre.y = int(listOfHeight / countList);
+	}
+	else
+		cout << "Cannot locate y coordinate" << endl;
     
     // Test for the maximum acceptable radius
     int largestRadius = 0;
@@ -129,7 +136,7 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
                 count += 1;
         }
         // Once we get a circle with too many white points, then we stop looping
-        if(count > 20)
+        if(count > 10)
             break;
         // Keep storing largest radius value
         else if(count <= 10 && i > largestRadius){
@@ -137,10 +144,12 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
         }
     }
     // Draw circle in raw image instead of processed image
-    circle(rawImage, centre, largestRadius, CV_RGB(255, 0, 0), 2);
+	cout << "{ " << centre.x << ", " << centre.y << " }" << endl;
+	cout << "Radius: " << largestRadius << endl;
+    // circle(rawImage, centre, largestRadius, CV_RGB(255, 255, 255), 3);
 }
 
-void preFiltering(cv::Mat rawImage, int upperColorRange, int lowerColorRange) {
+void preFiltering(cv::Mat rawImage, int lowerColorRange) {
 	cv::Mat image;
 	rawImage.copyTo(image);
 	int *whitePoints[2], pointCount = 0;
@@ -149,7 +158,7 @@ void preFiltering(cv::Mat rawImage, int upperColorRange, int lowerColorRange) {
 	// whitePoints[1] = set of x-coordinates
 	whitePoints[1] = (int *)malloc(10000 * sizeof(int));
 	// After opening files, convert to greyscale and pass to processing function
-	cvtColor(rawImage, image, COLOR_BGR2GRAY);
+	// cvtColor(rawImage, image, COLOR_BGR2GRAY);
 	// Filter out unrelated pixels
 	for(int j=0; j<image.cols; j++){
 		for(int i=0; i<image.rows; i++){
@@ -220,11 +229,8 @@ void returnKinect() {
 
 int main(int argc, char** argv){
 	int lowerColor;
+	int imageNumber = 1;
 	kinectInit();
-
-	// Get some depth only meta
-	cout << "Reliable Distance: "
-		<< uDepthMin << " - " << uDepthMax << endl;
 
 	// Create matrix object with same resolution of depth map
 	cv::Mat mDepthImg(iHeight, iWidth, CV_16UC1);
@@ -235,7 +241,7 @@ int main(int argc, char** argv){
 	cv::namedWindow("Depth Map");
 
 	// Pass by reference
-	colorCalculation(&upperColor, &lowerColor);
+	colorCalculation(&lowerColor);
 
 	// Get frame reader
 	pFrameSource->OpenReader(&pFrameReader);
@@ -269,10 +275,16 @@ int main(int argc, char** argv){
 			pFrame->Release();
 		}
 
+		int key_pressed = cv::waitKey(30);
+
 		// Break when enter pressed
-		if (cv::waitKey(30) == VK_RETURN) {
-			break;
+		if (key_pressed == VK_RETURN) {
+			string filename = "image" + std::to_string(imageNumber) + ".png";
+			imwrite("throwing-ball\\" + filename, mImg8bit);
+			imageNumber += 1;
 		}
+		else if (key_pressed == VK_ESCAPE)
+			break;
 	}
 
 	returnKinect();
