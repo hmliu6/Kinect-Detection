@@ -12,6 +12,11 @@
 
 using namespace std;
 
+typedef struct {
+	cv::Point centre;
+	int radius;
+} circleInfo;
+
 IKinectSensor* pSensor = nullptr;
 IDepthFrameSource* pFrameSource = nullptr;
 IFrameDescription* pFrameDescription = nullptr;
@@ -25,8 +30,33 @@ const int kinectHeight = 1700;
 const int fenceToKinect = 3000;
 const int tolerance = 200;
 const int maxDepthRange = 8000;
-const int rodLength = 35;
-const int rodWidth = 7;
+const int rodLength = 42;
+const int rodWidth = 5;
+
+const int arraySize = 10;
+
+class Queue{
+	public:
+		void queue(int arraySize){
+			validElement = 0;
+			circleArray = (circleInfo *)malloc(sizeof(circleInfo) * arraySize);
+			for(int i=0; i<arraySize; i++){
+				circleArray[i].centre.x = -1;
+				circleArray[i].centre.y = -1;
+				circleArray[i].radius = -1;
+			}
+			arrayIndex = arraySize;
+		}
+		void enqueue(cv::Point centre, int radius){
+			if(validElement < arrayIndex){
+				
+			}
+		}
+	private:
+		circleInfo *circleArray;
+		int validElement;
+		int arrayIndex;
+}
 
 // Calculate minimum meaningful colour range
 void colorCalculation(int *lowerColor){
@@ -97,8 +127,8 @@ int getRodCoordinates(cv::Mat image, int **whitePoints, int pointCount){
         for(int i=temp; i<rowWhiteCount; i++){
             if(rowWhiteNumber[i] - rowWhiteNumber[i-1] != 1 || (i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i-1] == 1)){
                 // Numbers represent pixels, so width has to +1
-                cout << "A: " << rowWhiteNumber[i-1] << endl;
-                cout << "B: " << rowWhiteNumber[temp-1] << endl;
+                // cout << "A: " << rowWhiteNumber[i-1] << endl;
+                // cout << "B: " << rowWhiteNumber[temp-1] << endl;
                 int width = rowWhiteNumber[i-1] - rowWhiteNumber[temp-1] + 1;
                 if(i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i-1] == 1)
                     width = rowWhiteNumber[i] - rowWhiteNumber[temp-1] + 1;
@@ -159,7 +189,7 @@ int getCircleCoordinates(cv::Mat image, int **whitePoints, int pointCount, int c
         return -1;
 }
 
-int getCircleRadius(int **whitePoints, int pointCount, Point centre){
+int getCircleRadius(int **whitePoints, int pointCount, cv::Point centre){
     // Test for the maximum acceptable radius
     int largestRadius = 0;
     // 50 can be other values which is sufficiently large enough
@@ -314,6 +344,8 @@ int main(int argc, char** argv){
 
 	// Get frame reader
 	pFrameSource->OpenReader(&pFrameReader);
+
+	Queue locationQueue(arraySize);
 
 	while (true){
 		// Get latest frame and check condition
