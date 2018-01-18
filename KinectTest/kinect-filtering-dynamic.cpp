@@ -37,159 +37,164 @@ void colorCalculation(int *lowerColor){
     *lowerColor = int(255.0 * lowerDistance/maxDepthRange);
 }
 
-int getRodCoordinates(cv::Mat image, int **whitePoints, int pointCount) {
-	// Initialize array with all zero to store satisfied x-coordinates
-	int *rowWhiteNumber = (int *)malloc(image.rows * sizeof(int));
-	int rowWhiteCount = 0, yCoordinates = 0;
-	for (int i = 0; i<10; i++)
-		rowWhiteNumber[i] = -1;
+int getRodCoordinates(cv::Mat image, int **whitePoints, int pointCount){
+    // Initialize array with all zero to store satisfied x-coordinates
+    int *rowWhiteNumber = (int *)malloc(image.rows * sizeof(int));
+    int rowWhiteCount = 0, yCoordinates = 0;
+    for(int i=0; i<10; i++)
+        rowWhiteNumber[i] = -1;
 
-	int currentX = 0, consecutiveCount = 0, lastHeight = 0;
-	bool chosen = false, garbage = false;
-	// Finding x-coordinate of inner circle in set of white points
-	for (int i = 0; i<pointCount; i++) {
-		// if(whitePoints[1][i] > 180 && whitePoints[1][i] < 190)
-		//     cout << "{" << whitePoints[1][i] << ", " << whitePoints[0][i] << "}" << endl;
-		// All points are already sorted according to x-coordinate
-		if (whitePoints[0][i] < image.rows / 2) {
-			currentX = 0;
-			continue;
-		}
-		if (currentX != whitePoints[1][i]) {
-			// Re-count if x-coordinate changed
-			currentX = whitePoints[1][i];
-			lastHeight = whitePoints[0][i];
-			consecutiveCount = 0;
-			chosen = false;
-			garbage = false;
-		}
-		else {
-			// Give tolerance since poor accuracy for long distance
-			if (whitePoints[0][i] - lastHeight <= 2 && !garbage) {
-				// Keep counting if we detected consecutive white
-				consecutiveCount += 1;
-				lastHeight = whitePoints[0][i];
-			}
-			// else
-			//     garbage = true;
-			// Large consecutive count means that it is probably part of rod
-			if (consecutiveCount >= rodLength && !chosen) {
-				// Mark it and denoted as chosen to prevent re-adding
-				rowWhiteNumber[rowWhiteCount] = currentX;
-				rowWhiteCount += 1;
-				chosen = true;
-			}
-		}
-	}
+    int currentX = 0, consecutiveCount = 0, lastHeight = 0;
+    bool chosen = false, garbage = false;
+    // Finding x-coordinate of inner circle in set of white points
+    for(int i=0; i<pointCount; i++){
+        // if(whitePoints[1][i] > 180 && whitePoints[1][i] < 190)
+        //     cout << "{" << whitePoints[1][i] << ", " << whitePoints[0][i] << "}" << endl;
+        // All points are already sorted according to x-coordinate
+        if(whitePoints[0][i] < image.rows/2){
+            currentX = 0;
+            continue;
+        }
+        if(currentX != whitePoints[1][i]){
+            // Re-count if x-coordinate changed
+            currentX = whitePoints[1][i];
+            lastHeight = whitePoints[0][i];
+            consecutiveCount = 0;
+            chosen = false;
+            garbage = false;
+        }
+        else{
+            // Give tolerance since poor accuracy for long distance
+            if(whitePoints[0][i] - lastHeight <= 2 && !garbage){
+                // Keep counting if we detected consecutive white
+                consecutiveCount += 1;
+                lastHeight = whitePoints[0][i];
+            }
+            // else
+            //     garbage = true;
+            // Large consecutive count means that it is probably part of rod
+            if(consecutiveCount >= rodLength && !chosen){
+                // Mark it and denoted as chosen to prevent re-adding
+                rowWhiteNumber[rowWhiteCount] = currentX;
+                rowWhiteCount += 1;
+                chosen = true;
+            }
+        }
+    }
 
-	if (rowWhiteCount > 0) {
-		// for (int i = 0; i<rowWhiteCount; i++)
-		// 	cout << rowWhiteNumber[i] << endl;
-		// Take sum of average to become x-coordinate of centre
-		// for(int i=0; i<rowWhiteCount; i++){
-		//     cout << rowWhiteNumber[i] << endl;
-		//     yCoordinates += rowWhiteNumber[i];
-		// }
-		// yCoordinates = int(yCoordinates / rowWhiteCount);
+    if(rowWhiteCount > 0){
+        for(int i=0; i<rowWhiteCount; i++)
+            cout << rowWhiteNumber[i] << endl;
+        // Take sum of average to become x-coordinate of centre
+        // for(int i=0; i<rowWhiteCount; i++){
+        //     cout << rowWhiteNumber[i] << endl;
+        //     yCoordinates += rowWhiteNumber[i];
+        // }
+        // yCoordinates = int(yCoordinates / rowWhiteCount);
 
-		// New Algorithm: Find width of all objects in line and ignore unreasonable width
-		int temp = 1;
-		for (int i = temp; i<rowWhiteCount; i++) {
-			if (rowWhiteNumber[i] - rowWhiteNumber[i - 1] != 1 || (i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i - 1] == 1)) {
-				// Numbers represent pixels, so width has to +1
-				// cout << "A: " << rowWhiteNumber[i - 1] << endl;
-				// cout << "B: " << rowWhiteNumber[temp - 1] << endl;
-				int width = rowWhiteNumber[i - 1] - rowWhiteNumber[temp - 1] + 1;
-				if (i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i - 1] == 1)
-					width = rowWhiteNumber[i] - rowWhiteNumber[temp - 1] + 1;
-				// cout << width << endl;
-				if (width > 1 && width <= rodWidth) {
-					// Simply take middle one in the consecutive numbers
-					yCoordinates = rowWhiteNumber[temp - 1 + int(width / 2)];
+        // New Algorithm: Find width of all objects in line and ignore unreasonable width
+        int temp = 1;
+        for(int i=temp; i<rowWhiteCount; i++){
+            if(rowWhiteNumber[i] - rowWhiteNumber[i-1] != 1 || (i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i-1] == 1)){
+                // Numbers represent pixels, so width has to +1
+                cout << "A: " << rowWhiteNumber[i-1] << endl;
+                cout << "B: " << rowWhiteNumber[temp-1] << endl;
+                int width = rowWhiteNumber[i-1] - rowWhiteNumber[temp-1] + 1;
+                if(i == rowWhiteCount - 1 && rowWhiteNumber[i] - rowWhiteNumber[i-1] == 1)
+                    width = rowWhiteNumber[i] - rowWhiteNumber[temp-1] + 1;
+                cout << width << endl;
+                if(width > 1 && width <= rodWidth){
+                    // Simply take middle one in the consecutive numbers
+                    yCoordinates = rowWhiteNumber[temp - 1 + int(width/2)];
 
-					// Free used objects to prevent overflow
-					free(rowWhiteNumber);
-					return yCoordinates;
-				}
-				else {
-					temp = i + 1;
-				}
-			}
-		}
-		// Free used objects to prevent overflow
-		free(rowWhiteNumber);
-		return -1;
-	}
-	else {
-		free(rowWhiteNumber);
-		return -1;
-	}
+                    // Free used objects to prevent overflow
+                    free(rowWhiteNumber);
+                    return yCoordinates;
+                }
+                else{
+                    temp = i + 1;
+                }
+            }
+        }
+        // Free used objects to prevent overflow
+        free(rowWhiteNumber);
+        return -1;
+    }
+    else{
+        free(rowWhiteNumber);
+        return -1;
+    }
 }
 
-int getCircleCoordinates(cv::Mat image, int **whitePoints, int pointCount, int centreX) {
-	int listOfHeight = 0, countList = 0, centreY = 0;
-	bool blackZone = false;
-	for (int i = image.cols / 2; i >= 0; i--) {
-		int count = 0;
-		for (int j = 0; j<pointCount; j++) {
-			// Test every points if they are inside circle, Increase count
-			int dY = pow((whitePoints[0][j] - i), 2);
-			int dX = pow((whitePoints[1][j] - centreX), 2);
-			// Circle that must have smaller radius than inner one
-			if (dX + dY < pow(15, 2))
-				count += 1;
-		}
-		// If we get enough amounts of count, it means that now it is looping in the black area
-		if (countList > 10)
-			blackZone = true;
-		// Once we get a circle with too many white points, then we stop looping
-		if (count > 10 && blackZone)
-			break;
-		else if (count <= 10) {
-			listOfHeight += i;
-			countList += 1;
-		}
-	}
-	// Take sum of average to get y-coordinate of centre
-	if (countList > 0) {
-		centreY = int(listOfHeight / countList);
-		return centreY;
-	}
-	else
-		return -1;
+int getCircleCoordinates(cv::Mat image, int **whitePoints, int pointCount, int centreX){
+    int listOfHeight = 0, countList = 0, centreY = 0;
+    bool blackZone = false;
+    for(int i=image.cols/2; i>=0; i--){
+        int count = 0;
+        for(int j=0; j<pointCount; j++){
+            // Test every points if they are inside circle, Increase count
+            int dY = pow((whitePoints[0][j] - i), 2);
+            int dX = pow((whitePoints[1][j] - centreX), 2);
+            // Circle that must have smaller radius than inner one
+            if(dX + dY < pow(15, 2))
+                count += 1;
+        }
+        // If we get enough amounts of count, it means that now it is looping in the black area
+        if(countList > 10)
+            blackZone = true;
+        // Once we get a circle with too many white points, then we stop looping
+        if(count > 10 && blackZone)
+            break;
+        else if(count <= 10){
+            listOfHeight += i;
+            countList += 1;
+        }
+    }
+    // Take sum of average to get y-coordinate of centre
+    if(countList > 0){
+        centreY = int(listOfHeight / countList);
+        return centreY;
+    }
+    else
+        return -1;
 }
 
-int getCircleRadius(int **whitePoints, int pointCount, cv::Point centre) {
-	// Test for the maximum acceptable radius
-	int largestRadius = 0;
-	// 50 can be other values which is sufficiently large enough
-	for (int i = 0; i<50; i++) {
-		int count = 0;
-		for (int j = 0; j<pointCount; j++) {
-			// Test every points if they are inside circle, Increase count
-			int dY = pow((whitePoints[0][j] - centre.y), 2);
-			int dX = pow((whitePoints[1][j] - centre.x), 2);
-			if (dX + dY < pow(i, 2))
-				count += 1;
-		}
-		// Once we get a circle with too many white points, then we stop looping
-		if (count > 10)
-			break;
-		// Keep storing largest radius value
-		else if (count <= 10 && i > largestRadius) {
-			largestRadius = i;
-		}
-	}
-	if (largestRadius > 0)
-		return largestRadius;
-	else
-		return -1;
+int getCircleRadius(int **whitePoints, int pointCount, Point centre){
+    // Test for the maximum acceptable radius
+    int largestRadius = 0;
+    // 50 can be other values which is sufficiently large enough
+    for(int i=0; i<50; i++){
+        int count = 0;
+        for(int j=0; j<pointCount; j++){
+            // Test every points if they are inside circle, Increase count
+            int dY = pow((whitePoints[0][j] - centre.y), 2);
+            int dX = pow((whitePoints[1][j] - centre.x), 2);
+            if(dX + dY < pow(i, 2))
+                count += 1;
+        }
+        // Once we get a circle with too many white points, then we stop looping
+        if(count > 10)
+            break;
+        // Keep storing largest radius value
+        else if(count <= 10 && i > largestRadius){
+            largestRadius = i;
+        }
+    }
+    if(largestRadius > 0)
+        return largestRadius;
+    else
+        return -1;
 }
 
 // Draw function for finding inner circle
 void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int pointCount) {
 	// Centre of bounding circle (x, y)
 	cv::Point centre;
+
+	if (pointCount == 0) {
+		cout << "Not found" << endl;
+		return;
+	}
 
 	centre.x = getRodCoordinates(image, whitePoints, pointCount);
 	if (centre.x == -1) {
