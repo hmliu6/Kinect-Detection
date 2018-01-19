@@ -1,7 +1,7 @@
 // Standard Library
 #include <iostream>
 #include <string>
-#include <bits/stdc++.h>
+#include <algorithm>
 
 // OpenCV Header
 #include <opencv2/core.hpp>
@@ -36,7 +36,7 @@ const int rodWidth = 5;
 
 class Queue{
 	public:
-		void queue(int inputSize){
+		Queue(int inputSize){
 			validElement = 0;
 			circleArray = (circleInfo *)malloc(sizeof(circleInfo) * inputSize);
 			for(int i=0; i<inputSize; i++){
@@ -72,9 +72,9 @@ class Queue{
 			int *tempDistance = (int *)malloc(sizeof(int) * validElement);
 			for(int i=0; i<validElement; i++)
 				tempDistance[i] = circleArray[i].distance;
-			stable_sort(tempDistance, tempDistance + validElement);
+			sort(tempDistance, tempDistance + validElement);
 
-			desiredValue = tempDistance[int(validElement / 2)];
+			int desiredValue = tempDistance[int(validElement / 2)];
 			for(index=0; index<validElement; index++)
 				if(circleArray[index].distance == desiredValue)
 					break;
@@ -86,10 +86,10 @@ class Queue{
 		circleInfo *circleArray;
 		int validElement;
 		int arraySize;
-}
+};
 
-const int arraySize = 10;
-Queue locationQueue(arraySize);
+int arraySize = 10;
+Queue *locationQueue = new Queue(arraySize);
 
 // Calculate minimum meaningful colour range
 void colorCalculation(int *lowerColor){
@@ -271,8 +271,8 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
 		return;
 	}
 
-	locationQueue.enqueue(centre);
-	cv::Point medianCentre = locationQueue.medianDistance();
+	locationQueue->enqueue(centre);
+	cv::Point medianCentre = locationQueue->medianDistance();
 
 	int largestRadius = getCircleRadius(whitePoints, pointCount, medianCentre);
 	if (largestRadius == -1) {
