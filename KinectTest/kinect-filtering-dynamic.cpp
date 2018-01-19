@@ -1,6 +1,7 @@
 // Standard Library
 #include <iostream>
 #include <string>
+#include <bits/stdc++.h>
 
 // OpenCV Header
 #include <opencv2/core.hpp>
@@ -14,7 +15,7 @@ using namespace std;
 
 typedef struct {
 	cv::Point centre;
-	int radius;
+	int distance;
 } circleInfo;
 
 IKinectSensor* pSensor = nullptr;
@@ -33,30 +34,62 @@ const int maxDepthRange = 8000;
 const int rodLength = 42;
 const int rodWidth = 5;
 
-const int arraySize = 10;
-
 class Queue{
 	public:
-		void queue(int arraySize){
+		void queue(int inputSize){
 			validElement = 0;
-			circleArray = (circleInfo *)malloc(sizeof(circleInfo) * arraySize);
-			for(int i=0; i<arraySize; i++){
+			circleArray = (circleInfo *)malloc(sizeof(circleInfo) * inputSize);
+			for(int i=0; i<inputSize; i++){
 				circleArray[i].centre.x = -1;
 				circleArray[i].centre.y = -1;
-				circleArray[i].radius = -1;
+				circleArray[i].distance = -1;
 			}
-			arrayIndex = arraySize;
+			arraySize = inputSize;
 		}
-		void enqueue(cv::Point centre, int radius){
-			if(validElement < arrayIndex){
-				
+		void enqueue(cv::Point input){
+			if(validElement < arraySize){
+				circleArray[validElement].centre.x = input.x;
+				circleArray[validElement].centre.y = input.y;
+				circleArray[validElement].distance = pow(input.x, 2) + pow(input.y, 2);
+				validElement += 1;
+			}
+			else{
+				for(int i=1; i<arraySize; i++){
+					circleArray[i - 1].centre.x = circleArray[i].centre.x;
+					circleArray[i - 1].centre.y = circleArray[i].centre.y;
+					circleArray[i - 1].distance = circleArray[i].distance;
+				}
+				circleArray[arraySize - 1].centre.x = input.x;
+				circleArray[arraySize - 1].centre.y = input.y;
+				circleArray[arraySize - 1].distance = pow(input.x, 2) + pow(input.y, 2);
 			}
 		}
+		cv::Point medianDistance(){
+			int index;
+			if(validElement == 1)
+				return circleArray[validElement - 1].centre;
+		
+			int *tempDistance = (int *)malloc(sizeof(int) * validElement);
+			for(int i=0; i<validElement; i++)
+				tempDistance[i] = circleArray[i].distance;
+			stable_sort(tempDistance, tempDistance + validElement);
+
+			desiredValue = tempDistance[int(validElement / 2)];
+			for(index=0; index<validElement; index++)
+				if(circleArray[index].distance == desiredValue)
+					break;
+			
+			return circleArray[index].centre;
+		}
+
 	private:
 		circleInfo *circleArray;
 		int validElement;
-		int arrayIndex;
+		int arraySize;
 }
+
+const int arraySize = 10;
+Queue locationQueue(arraySize);
 
 // Calculate minimum meaningful colour range
 void colorCalculation(int *lowerColor){
@@ -238,16 +271,18 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat image, int **whitePoints, int po
 		return;
 	}
 
-	int largestRadius = getCircleRadius(whitePoints, pointCount, centre);
+	locationQueue.enqueue(centre);
+	cv::Point medianCentre = locationQueue.medianDistance();
+
+	int largestRadius = getCircleRadius(whitePoints, pointCount, medianCentre);
 	if (largestRadius == -1) {
 		cout << "Cannot find radius" << endl;
 		return;
 	}
 
 	// Draw circle in raw image instead of processed image
-	circle(rawImage, centre, largestRadius, CV_RGB(255, 255, 255), 2);
+	circle(rawImage, medianCentre, largestRadius, CV_RGB(255, 255, 255), 2);
 }
-
 
 void preFiltering(cv::Mat rawImage, int lowerColorRange) {
 	cv::Mat image;
@@ -285,7 +320,6 @@ void preFiltering(cv::Mat rawImage, int lowerColorRange) {
 	free(whitePoints[0]);
 	free(whitePoints[1]);
 }
-
 
 void kinectInit() {
 	// Get default kinect sensor
@@ -344,8 +378,6 @@ int main(int argc, char** argv){
 
 	// Get frame reader
 	pFrameSource->OpenReader(&pFrameReader);
-
-	Queue locationQueue(arraySize);
 
 	while (true){
 		// Get latest frame and check condition
