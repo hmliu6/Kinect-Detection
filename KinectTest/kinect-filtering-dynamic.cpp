@@ -235,7 +235,7 @@ int getRodCoordinates(int imageWidth, int **whitePoints, int pointCount){
 }
 
 int getCircleCoordinates(int imageHeight, int **whitePoints, int pointCount, int centreX){
-    int listOfHeight = 0, countList = 0, centreY = 0;
+    int listOfHeight = 0, countList = 0, centreY = 0, threshold = 15;
     bool blackZone = false;
     for(int i=imageHeight; i>=0; i--){
         int count = 0;
@@ -248,12 +248,12 @@ int getCircleCoordinates(int imageHeight, int **whitePoints, int pointCount, int
                 count += 1;
         }
         // If we get enough amounts of count, it means that now it is looping in the black area
-        if(countList > 10)
+        if(countList > threshold)
             blackZone = true;
         // Once we get a circle with too many white points, then we stop looping
-        if(count > 10 && blackZone)
+        if(count > threshold && blackZone)
             break;
-        else if(count <= 10){
+        else if(count <= threshold){
             listOfHeight += i;
             countList += 1;
         }
@@ -269,7 +269,7 @@ int getCircleCoordinates(int imageHeight, int **whitePoints, int pointCount, int
 
 int getCircleRadius(int **whitePoints, int pointCount, cv::Point centre){
     // Test for the maximum acceptable radius
-    int largestRadius = 0, threshold = 20;
+    int largestRadius = 0, threshold = 15;
     // 50 can be other values which is sufficiently large enough
     for(int i=0; i<50; i++){
         int count = 0;
@@ -474,7 +474,7 @@ void goalDetection(){
 }
 
 void ballFilter(){
-    cv::Mat cannyEdge;
+    cv::Mat cannyEdge, temp;
     vector<vector<cv::Point> > contours;
     vector<Vec4i> hierarchy;
 
@@ -491,8 +491,8 @@ void ballFilter(){
     }
 
     // Function(sourceImage, destImage, params);
-    medianBlur(imageForBall, imageForBall, 2 * medianBlurValue + 1);
-    Canny(imageForBall, cannyEdge, cannyLower, cannyUpper);
+    medianBlur(imageForBall, temp, 2 * medianBlurValue + 1);
+    Canny(temp, cannyEdge, cannyLower, cannyUpper);
     findContours(cannyEdge, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     // Draw all contours with filled colour
@@ -519,7 +519,8 @@ void ballFilter(){
         // Record current first point to vector array
 		if (massCentre[0].x > 0 && massCentre[0].y > 0) {
 			ballPath[recordedPos].ballCentre = massCentre[0];
-			ballPath[recordedPos].zDistance = int(imageForBall.at<IMAGE_FORMAT>(massCentre[0].y, massCentre[0].x));
+			cout << imageForBall.dims << endl;
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(massCentre[0].y), int(massCentre[0].x));
 			recordedPos += 1;
 			detectedBall = 1;
 		}
@@ -536,6 +537,8 @@ void ballFilter(){
     // Draw trace line with mutex lock to achieve mutually exclusive
     for(int i=1; i<recordedPos; i++)
         cv::line(rawImage, ballPath[i-1].ballCentre, ballPath[i].ballCentre, Scalar(0, 255, 255), 2);
+	cannyEdge.release();
+	temp.release();
 }
 
 void kinectInit() {
@@ -578,14 +581,10 @@ void returnKinect() {
 }
 
 void imageProcessing(cv::Mat rodImage, int lowerColorRange){
-    rodImage.copyTo(imageForBall);
-
     // Create thread to perform two separated tasks
     circleExist = false;
     preFiltering(rawImage, rodImage, lowerColorRange);
-	ballFilter();
-    rodImage.release();
-    imageForBall.release();
+	// ballFilter();
 
     if(detectedBall == -3 && recordedPos > 0)
         goalDetection();
@@ -635,6 +634,7 @@ int main(int argc, char** argv){
 			// Change here if using raw 16 bits
 			imageDisplay.copyTo(rawImage);
             imageDisplay.copyTo(rodImage);
+			imageDisplay.copyTo(imageForBall);
 
 			// Create thread to perform two separated tasks
 			imageProcessing(rodImage, lowerColor);
@@ -651,6 +651,8 @@ int main(int argc, char** argv){
 		rawImage.release();
 		imageDisplay.release();
 		realImage.release();
+		rodImage.release();
+		imageForBall.release();
 	}
 
 	returnKinect();
