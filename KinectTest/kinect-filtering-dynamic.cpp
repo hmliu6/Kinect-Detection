@@ -338,19 +338,22 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat rodImage, int **whitePoints, int
 	outputCircle = locationQueue->medianDistance();
 
 	// Draw circle in raw image instead of processed image
-    pthread_mutex_lock(&mutexLock);
-	circle(rawImage, outputCircle.centre, outputCircle.maxRadius, CV_RGB(255, 255, 255), 2);
-    pthread_mutex_unlock(&mutexLock);
+    if(outputCircle.centre.x > 0 && outputCircle.centre.y > 0 && outputCircle.maxRadius > 0){
+        circleExist = true;
+        pthread_mutex_lock(&mutexLock);
+        circle(rawImage, outputCircle.centre, outputCircle.maxRadius, CV_RGB(255, 255, 255), 2);
+        pthread_mutex_unlock(&mutexLock);
 
-    // Locate z-Position for goal circle
-    for(int j=0; j<pointCount; j++){
-        // Test every points if they are on circle
-        int dY = pow((whitePoints[0][j] - outputCircle.centre.y), 2);
-        int dX = pow((whitePoints[1][j] - outputCircle.centre.x), 2);
-        if(dX + dY == pow(outputCircle.maxRadius, 2)){
-            int tempPosition = int(rodImage.at<IMAGE_FORMAT>(whitePoints[0][j], whitePoints[1][j]));
-            if(tempPosition > zPos)
-                zPos = tempPosition;
+        // Locate z-Position for goal circle
+        for(int j=0; j<pointCount; j++){
+            // Test every points if they are on circle
+            int dY = pow((whitePoints[0][j] - outputCircle.centre.y), 2);
+            int dX = pow((whitePoints[1][j] - outputCircle.centre.x), 2);
+            if(dX + dY == pow(outputCircle.maxRadius, 2)){
+                int tempPosition = int(rodImage.at<IMAGE_FORMAT>(whitePoints[0][j], whitePoints[1][j]));
+                if(tempPosition > zPos)
+                    zPos = tempPosition;
+            }
         }
     }
 }
@@ -587,16 +590,33 @@ void returnKinect() {
 	pSensor = nullptr;
 }
 
+void imageProcessing(cv::Mat rodImage, int lowerColorRange){
+    rodImage.copyTo(imageForBall);
+
+    // Create thread to perform two separated tasks
+    circleExist = false;
+    pthread_create(&ballTracking, NULL, ballFilter, NULL);
+    preFiltering(rawImage, rodImage, lowerColorRange);
+    pthread_join(ballTracking, NULL);
+    rodImage.release();
+    imageForBall.release();
+
+    if(detectedBall == -3 && recordedPos > 0)
+        goalDetection();
+
+    zPos = -1;
+}
+
 int main(int argc, char** argv){
 	int lowerColor, key_pressed;
 	int imageNumber = 1;
 	kinectInit();
 
 	// Create matrix object with same resolution of depth map
-	cv::Mat mDepthImg(iHeight, iWidth, CV_16UC1);
+	cv::Mat rawImage(iHeight, iWidth, CV_16UC1);
 
 	// mDepthImg = 16bit unsigned, mImg8bit = 8bit unsigned
-	cv::Mat mImg8bit(iHeight, iWidth, CV_8UC1);
+	cv::Mat imageDisplay(iHeight, iWidth, CV_8UC1);
 
 	cv::namedWindow("Depth Map");
 
@@ -617,32 +637,24 @@ int main(int argc, char** argv){
 
 			// Copy the depth map to cv::Mat mDepthImg object
 			pFrame->CopyFrameDataToArray(iWidth * iHeight,
-				reinterpret_cast<UINT16*>(mDepthImg.data));
+				reinterpret_cast<UINT16*>(rawImage.data));
 
 			// Here we can perform some calculation to finish some tasks
 			// ...
 
 			// Convert from 16bit to 8bit
 			// unsigned int = 4 bytes, unsigned char = 1 bytes
-			mDepthImg.convertTo(mImg8bit, CV_8U, 255.0f / 8000);
+			rawImage.convertTo(imageDisplay, CV_8U, 255.0f / 8000);
 
 			// Change here if using raw 16 bits
-			rodImage.copyTo(imageForBall);
+            imageDisplay.copyTo(rodImage);
+			imageDisplay.copyTo(imageForBall);
 
 			// Create thread to perform two separated tasks
-			pthread_create(&ballTracking, NULL, ballFilter, NULL);
-			preFiltering(rawImage, rodImage, lowerColorRange);
-			pthread_join(ballTracking, NULL);
-			rodImage.release();
-			imageForBall.release();
-
-			if(detectedBall == -3 && recordedPos > 0)
-				goalDetection();
-
-			zPos = -1;
+			imageProcessing(rodImage, lowerColor);
 
 			// cv::imshow to display image
-			cv::imshow("Depth Map", mImg8bit);
+			cv::imshow("Depth Map", imageDisplay);
 			// Hashing from depth to colour h(0) = (0, 0, 0)
 			rawImage.release();
 
