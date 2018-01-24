@@ -508,8 +508,13 @@ void ballFilter(){
 
         // Get mass centre of contours
         vector<Point2f> massCentre(contours.size());
-        for(int i = 0; i < contours.size(); i++)
-            massCentre[i] = Point2f(moment[i].m10/moment[i].m00 , moment[i].m01/moment[i].m00);
+        int massCentreCounter = 0;
+        for(int i = 0; i < contours.size(); i++){
+            if(moment[i].m00 > 0){
+                massCentre[massCentreCounter] = Point2f(moment[i].m10/moment[i].m00, moment[i].m01/moment[i].m00);
+                massCentreCounter += 1;
+            }
+        }
         
         // Draw centre on image
         // cout << "{ " << massCentre[0].x << ", " << massCentre[0].y << " }" << endl;
@@ -519,7 +524,6 @@ void ballFilter(){
         // Record current first point to vector array
 		if (massCentre[0].x > 0 && massCentre[0].y > 0) {
 			ballPath[recordedPos].ballCentre = massCentre[0];
-			cout << imageForBall.dims << endl;
 			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(massCentre[0].y), int(massCentre[0].x));
 			recordedPos += 1;
 			detectedBall = 1;
