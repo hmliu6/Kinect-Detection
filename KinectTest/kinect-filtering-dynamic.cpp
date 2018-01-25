@@ -398,6 +398,8 @@ void goalDetection(){
         // At least one point intersection between circle and path only considering xy-plane
         // Here Point(x, y) is correct
         double lineSlope, lineIntercept, aCoefficient, bCoefficient, cCoefficient, delta;
+		if (ballPath[i].ballCentre.x - ballPath[i - 1].ballCentre.x == 0)
+			return;
         lineSlope = (ballPath[i].ballCentre.y - ballPath[i - 1].ballCentre.y) / (ballPath[i].ballCentre.x - ballPath[i - 1].ballCentre.x);
         lineIntercept = -1 * lineSlope * ballPath[i - 1].ballCentre.x + ballPath[i - 1].ballCentre.y;
         aCoefficient = 1 + pow(lineSlope, 2);
@@ -493,6 +495,7 @@ void ballFilter(){
     // Function(sourceImage, destImage, params);
     medianBlur(imageForBall, temp, 2 * medianBlurValue + 1);
     Canny(temp, cannyEdge, cannyLower, cannyUpper);
+	cv::imshow("Miedian Blur", temp);
     findContours(cannyEdge, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     // Draw all contours with filled colour
@@ -590,10 +593,12 @@ void imageProcessing(cv::Mat rodImage, int lowerColorRange){
     // Create thread to perform two separated tasks
     circleExist = false;
     preFiltering(rawImage, rodImage, lowerColorRange);
-	// ballFilter();
+	ballFilter();
 
-    if(detectedBall == -3 && recordedPos > 0)
-        goalDetection();
+	if (detectedBall == -3 && recordedPos > 0) {
+		cout << "Goal Detection is running" << endl;
+		goalDetection();
+	}
 
     zPos = -1;
 }
