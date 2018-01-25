@@ -496,18 +496,26 @@ void ballFilter(){
     findContours(cannyEdge, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     // Draw all contours with filled colour
+    int maxContour = 0;
     Scalar color(255, 0, 0);
-    // for(int i = 0; i < contours.size(); i++) // Iterate through each contour
-    //     drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
+    for(int i = 0; i < contours.size(); i++){ // Iterate through each contour
+        drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
+        if(i > 0){
+            if(contours[i].size() > contours[maxContour].size())
+                maxContour = i;
+        }
+    }
 
     if(contours.size() > 0){
         vector<RotatedRect> minEllipse(contours.size());
         // Get minimum ellipse of contours
         for(int i = 0; i < contours.size(); i++){
-            minEllipse[i] = fitEllipse(Mat(contours[i]));
-            cout << "minimum enclosing ellipse: " << minEllipse[i].center << endl;
-            cv::line(rawImage, cv::Point(minEllipse[i].center.x - 5, minEllipse[i].center.y), cv::Point(minEllipse[i].center.x + 5, minEllipse[i].center.y), Scalar(255, 255, 0), 2);
-            cv::line(rawImage, cv::Point(minEllipse[i].center.x, minEllipse[i].center.y - 5), cv::Point(minEllipse[i].center.x, minEllipse[i].center.y + 5), Scalar(255, 255, 0), 2);
+            if(contours[i].size() > 5){
+                minEllipse[i] = fitEllipse(Mat(contours[i]));
+                cout << "minimum enclosing ellipse: " << minEllipse[i].center << endl;
+                cv::line(rawImage, cv::Point(minEllipse[i].center.x - 5, minEllipse[i].center.y), cv::Point(minEllipse[i].center.x + 5, minEllipse[i].center.y), Scalar(255, 255, 0), 2);
+                cv::line(rawImage, cv::Point(minEllipse[i].center.x, minEllipse[i].center.y - 5), cv::Point(minEllipse[i].center.x, minEllipse[i].center.y + 5), Scalar(255, 255, 0), 2);
+            }
         }
         
         // Draw centre on image
@@ -516,12 +524,12 @@ void ballFilter(){
         // cv::line(rawImage, cv::Point(massCentre[0].x, massCentre[0].y - 5), cv::Point(massCentre[0].x, massCentre[0].y + 5), Scalar(255, 255, 0), 2);
 
         // Record current first point to vector array
-		// if (massCentre[0].x > 0 && massCentre[0].y > 0) {
-		// 	ballPath[recordedPos].ballCentre = massCentre[0];
-		// 	ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(massCentre[0].y), int(massCentre[0].x));
-		// 	recordedPos += 1;
-		// 	detectedBall = 1;
-		// }
+		if (minEllipse[maxContour].center.x > 0 && minEllipse[maxContour].center.y > 0) {
+			ballPath[recordedPos].ballCentre = minEllipse[maxContour].center;
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(minEllipse[maxContour].center.y), int(minEllipse[maxContour].center.x));
+			recordedPos += 1;
+			detectedBall = 1;
+		}
     }
     else{
         detectedBall -= 1;
