@@ -516,12 +516,12 @@ void ballFilter(){
         // cv::line(rawImage, cv::Point(massCentre[0].x, massCentre[0].y - 5), cv::Point(massCentre[0].x, massCentre[0].y + 5), Scalar(255, 255, 0), 2);
 
         // Record current first point to vector array
-		if (massCentre[0].x > 0 && massCentre[0].y > 0) {
-			ballPath[recordedPos].ballCentre = massCentre[0];
-			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(massCentre[0].y), int(massCentre[0].x));
-			recordedPos += 1;
-			detectedBall = 1;
-		}
+		// if (massCentre[0].x > 0 && massCentre[0].y > 0) {
+		// 	ballPath[recordedPos].ballCentre = massCentre[0];
+		// 	ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(massCentre[0].y), int(massCentre[0].x));
+		// 	recordedPos += 1;
+		// 	detectedBall = 1;
+		// }
     }
     else{
         detectedBall -= 1;
