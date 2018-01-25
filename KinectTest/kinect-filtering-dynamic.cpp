@@ -329,13 +329,14 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat rodImage, int **whitePoints, int
     if(outputCircle.centre.x > 0 && outputCircle.centre.y > 0 && outputCircle.maxRadius > 0){
         circleExist = true;
         circle(rawImage, outputCircle.centre, outputCircle.maxRadius, CV_RGB(255, 255, 255), 2);
+		zPos = -1;
 
         // Locate z-Position for goal circle
         for(int j=0; j<pointCount; j++){
             // Test every points if they are on circle
             int dY = pow((whitePoints[0][j] - outputCircle.centre.y), 2);
             int dX = pow((whitePoints[1][j] - outputCircle.centre.x), 2);
-            if(dX + dY == pow(outputCircle.maxRadius, 2)){
+            if(abs(dX + dY - pow(outputCircle.maxRadius, 2)) < 15){
                 int tempPosition = int(rodImage.at<IMAGE_FORMAT>(whitePoints[0][j], whitePoints[1][j]));
                 if(tempPosition > zPos)
                     zPos = tempPosition;
@@ -386,7 +387,7 @@ void preFiltering(cv::Mat rawImage, cv::Mat rodImage, int lowerColorRange){
 
 void goalDetection(){
     bool result = false, intersection = false;
-    double threshold = 0.1;
+    double threshold = 1.0;
     int pointCount = 0;
     intersectionPoint *pointsOnLine = new intersectionPoint[3];
     // Case 1: Get two intersection points for path
@@ -486,6 +487,8 @@ void goalDetection(){
             intersect1.y = lineSlope * intersect1.x + lineIntercept;
             intersect2.x = (-1 * bCoefficient - sqrt(delta)) / (2.0 * aCoefficient);
             intersect2.y = lineSlope * intersect2.x + lineIntercept;
+			cout << "Intersection-1: " << intersect1 << endl;
+			cout << "Intersection-2: " << intersect2 << endl;
 
             // Interpolate z-distance value
             double twoPointDistance, intersect1DistanceSum, intersect2DistanceSum;
@@ -503,35 +506,39 @@ void goalDetection(){
             double intersect1_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint1 / twoPointDistance;
             double distanceWithPoint2 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect2.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect2.y, 2));
             double intersect2_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint2 / twoPointDistance;
-            // z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
+			cout << "Interpolation-z1: " << intersect1_z << endl;
+			cout << "Interpolation-z2: " << intersect2_z << endl;
+			
+			// z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
             cout << "Rod Position: " << zPos << endl;
-            if(fabs(intersect1DistanceSum - twoPointDistance) < threshold)
-                if(intersect1_z < zPos && zPos < intersect2_z){
-                    cout << "Cause by one point to return goal" << endl;
-                    result = true;
-                }
-            else if(fabs(intersect2DistanceSum - twoPointDistance) < threshold)
-                if(intersect1_z < zPos && zPos < intersect2_z){
-                    cout << "Cause by one point to return goal" << endl;
-                    result = true;
-                }
+			cout << "Two Points Distance: " << twoPointDistance << endl;
+			cout << "Two Points with intersect 1 Distance: " << intersect1DistanceSum << endl;
+			cout << "Two Points with intersect 2 Distance: " << intersect2DistanceSum << endl;
+			if (fabs(intersect1DistanceSum - twoPointDistance) < threshold) {
+				if (intersect1_z < zPos && zPos < intersect2_z) {
+					cout << "Cause by one point to return goal" << endl;
+					result = true;
+				}
+			}
+			else if (fabs(intersect2DistanceSum - twoPointDistance) < threshold) {
+				if (intersect2_z < zPos && zPos < intersect1_z) {
+					cout << "Cause by one point to return goal" << endl;
+					result = true;
+				}
+			}
         }
     }
 
     // Put text on displayed image
-    if(result == true && recordedPos > 0)
-        putText(rawImage, string("Goal"), Point(430, 30), 0, 1, Scalar(0, 127, 255), 2);
-    else if(result == false && recordedPos > 0)
-        putText(rawImage, string("Fail"), Point(430, 30), 0, 1, Scalar(0, 127, 255), 2);
+	if (result == true && recordedPos > 0) {
+		putText(rawImage, string("Goal"), Point(430, 30), 0, 1, Scalar(0, 127, 255), 2);
+		cout << "GOAL" << endl;
+	}
+	else if (result == false && recordedPos > 0) {
+		putText(rawImage, string("Fail"), Point(430, 30), 0, 1, Scalar(0, 127, 255), 2);
+		cout << "FAIL" << endl;
+	}
     delete[] pointsOnLine;
-}
-
-bool checkPointInsideCircle(cv::Point pointCheck, cv::Point circleCentre, int radius){
-    int delta = pow(pointCheck.x - circleCentre.x, 2) + pow(pointCheck.y - circleCentre.y, 2);
-    if(delta < pow(radius, 2))
-        return true;
-    else
-        return false;
 }
 
 void ballFilter(){
@@ -548,39 +555,41 @@ void ballFilter(){
             // Assume that the ball must be higher than image centre, change here if using raw 16 bits
             if(i >= imageForBall.rows/2)
                 imageForBall.at<IMAGE_FORMAT>(i, j) = 0;
-            if(checkPointInsideCircle(cv:Point(i, j), outputCircle.centre, outputCircle.maxRadius + 5) && !checkPointInsideCircle(cv:Point(i, j), outputCircle.centre, outputCircle.maxRadius))
-                imageForBall.at<IMAGE_FORMAT>(i, j) = 0;
         }
     }
 
     // Function(sourceImage, destImage, params);
     medianBlur(imageForBall, temp, 2 * medianBlurValue + 1);
     Canny(temp, cannyEdge, cannyLower, cannyUpper);
-	cv::imshow("Miedian Blur", imageForBall);
+	cv::imshow("Miedian Blur", temp);
     findContours(cannyEdge, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     // Draw all contours with filled colour
     int maxContour = 0;
     Scalar color(255, 0, 0);
     for(int i = 0; i < contours.size(); i++){ // Iterate through each contour
-		cout << contours[i].size() << endl;
-        drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
+		if (contourArea(contours[i]) > 150) {
+			drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
+			cout << "Area: " << contourArea(contours[i]) << endl;
+		}
         if(i > 0){
-            if(contours[i].size() > contours[maxContour].size())
+            if(contourArea(contours[i]) > contourArea(contours[maxContour]))
                 maxContour = i;
         }
     }
 
     if(contours.size() > 0){
-        vector<RotatedRect> minEllipse(contours.size());
+		vector<vector<Point> > contours_poly(contours.size());
+		vector<Rect> boundRect(contours.size());
+		vector<Point2f>center(contours.size());
+		vector<float>radius(contours.size());
         // Get minimum ellipse of contours
         for(int i = 0; i < contours.size(); i++){
-            if(contours[i].size() > 5){
-                minEllipse[i] = fitEllipse(Mat(contours[i]));
-                cout << "minimum enclosing ellipse: " << minEllipse[i].center << endl;
-                cv::line(rawImage, cv::Point(minEllipse[i].center.x - 5, minEllipse[i].center.y), cv::Point(minEllipse[i].center.x + 5, minEllipse[i].center.y), Scalar(255, 255, 0), 2);
-                cv::line(rawImage, cv::Point(minEllipse[i].center.x, minEllipse[i].center.y - 5), cv::Point(minEllipse[i].center.x, minEllipse[i].center.y + 5), Scalar(255, 255, 0), 2);
-            }
+			if (contourArea(contours[i]) > 150) {
+				approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
+				boundRect[i] = boundingRect(Mat(contours_poly[i]));
+				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
+			}
         }
         
         // Draw centre on image
@@ -589,11 +598,21 @@ void ballFilter(){
         // cv::line(rawImage, cv::Point(massCentre[0].x, massCentre[0].y - 5), cv::Point(massCentre[0].x, massCentre[0].y + 5), Scalar(255, 255, 0), 2);
 
         // Record current first point to vector array
-		if (minEllipse[maxContour].center.x > 0 && minEllipse[maxContour].center.y > 0 && minEllipse[maxContour].center.y < imageForBall.cols && minEllipse[maxContour].center.x < imageForBall.rows / 2) {
-			ballPath[recordedPos].ballCentre = minEllipse[maxContour].center;
-			ballPath[recordedPos].zDistance = (int)imageForBall.at<uchar>(int(minEllipse[maxContour].center.y), int(minEllipse[maxContour].center.x));
+		if (center[maxContour].x > 0 && center[maxContour].y > 0 && recordedPos < 20) {
+			ballPath[recordedPos].ballCentre = center[maxContour];
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<__int8>(int(center[maxContour].y), int(center[maxContour].x));
 			recordedPos += 1;
 			detectedBall = 1;
+		}
+		else if (recordedPos == 20 && center[maxContour].x > 0 && center[maxContour].y > 0) {
+			recordedPos = 0;
+			ballPath[recordedPos].ballCentre = center[maxContour];
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<__int8>(int(center[maxContour].y), int(center[maxContour].x));
+			recordedPos += 1;
+			detectedBall = 1;
+		}
+		else {
+			detectedBall -= 1;
 		}
     }
     else{
