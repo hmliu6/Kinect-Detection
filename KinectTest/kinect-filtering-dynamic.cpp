@@ -526,6 +526,14 @@ void goalDetection(){
     delete[] pointsOnLine;
 }
 
+bool checkPointInsideCircle(cv::Point pointCheck, cv::Point circleCentre, int radius){
+    int delta = pow(pointCheck.x - circleCentre.x, 2) + pow(pointCheck.y - circleCentre.y, 2);
+    if(delta < pow(radius, 2))
+        return true;
+    else
+        return false;
+}
+
 void ballFilter(){
     cv::Mat cannyEdge, temp;
     vector<vector<cv::Point> > contours;
@@ -540,13 +548,15 @@ void ballFilter(){
             // Assume that the ball must be higher than image centre, change here if using raw 16 bits
             if(i >= imageForBall.rows/2)
                 imageForBall.at<IMAGE_FORMAT>(i, j) = 0;
+            if(checkPointInsideCircle(cv:Point(i, j), outputCircle.centre, outputCircle.maxRadius + 5) && !checkPointInsideCircle(cv:Point(i, j), outputCircle.centre, outputCircle.maxRadius))
+                imageForBall.at<IMAGE_FORMAT>(i, j) = 0;
         }
     }
 
     // Function(sourceImage, destImage, params);
     medianBlur(imageForBall, temp, 2 * medianBlurValue + 1);
     Canny(temp, cannyEdge, cannyLower, cannyUpper);
-	cv::imshow("Miedian Blur", temp);
+	cv::imshow("Miedian Blur", imageForBall);
     findContours(cannyEdge, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
     // Draw all contours with filled colour
