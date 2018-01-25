@@ -498,11 +498,11 @@ void goalDetection(){
                                   + sqrt(pow(intersect2.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(intersect2.y - ballPath[recordedPos - 2].ballCentre.y, 2));
             
             // Return only points lied within line segments
-            int zDiff = ballPath[recordedPos - 2].distance - ballPath[recordedPos - 1].distance;
+            int zDiff = ballPath[recordedPos - 2].zDistance - ballPath[recordedPos - 1].zDistance;
             double distanceWithPoint1 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect1.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect1.y, 2));
-            double intersect1_z = ballPath[recordedPos - 2].distance - zDiff * distanceWithPoint1 / twoPointDistance;
+            double intersect1_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint1 / twoPointDistance;
             double distanceWithPoint2 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect2.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect2.y, 2));
-            double intersect2_z = ballPath[recordedPos - 2].distance - zDiff * distanceWithPoint2 / twoPointDistance;
+            double intersect2_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint2 / twoPointDistance;
             // z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
             cout << "Rod Position: " << zPos << endl;
             if(fabs(intersect1DistanceSum - twoPointDistance) < threshold)
@@ -553,6 +553,7 @@ void ballFilter(){
     int maxContour = 0;
     Scalar color(255, 0, 0);
     for(int i = 0; i < contours.size(); i++){ // Iterate through each contour
+		cout << contours[i].size() << endl;
         drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
         if(i > 0){
             if(contours[i].size() > contours[maxContour].size())
@@ -578,9 +579,9 @@ void ballFilter(){
         // cv::line(rawImage, cv::Point(massCentre[0].x, massCentre[0].y - 5), cv::Point(massCentre[0].x, massCentre[0].y + 5), Scalar(255, 255, 0), 2);
 
         // Record current first point to vector array
-		if (minEllipse[maxContour].center.x > 0 && minEllipse[maxContour].center.y > 0) {
+		if (minEllipse[maxContour].center.x > 0 && minEllipse[maxContour].center.y > 0 && minEllipse[maxContour].center.y < imageForBall.cols && minEllipse[maxContour].center.x < imageForBall.rows / 2) {
 			ballPath[recordedPos].ballCentre = minEllipse[maxContour].center;
-			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(minEllipse[maxContour].center.y), int(minEllipse[maxContour].center.x));
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<uchar>(int(minEllipse[maxContour].center.y), int(minEllipse[maxContour].center.x));
 			recordedPos += 1;
 			detectedBall = 1;
 		}
