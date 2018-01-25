@@ -59,7 +59,7 @@ const int maxDepthRange = 8000;
 const int rodLength = 35;
 const int rodWidth = 7;
 
-const int medianBlurValue = 5;
+const int medianBlurValue = 4;
 const int cannyLower = 10;
 const int cannyUpper = 150;
 
@@ -329,14 +329,13 @@ void drawBoundingArea(cv::Mat rawImage, cv::Mat rodImage, int **whitePoints, int
     if(outputCircle.centre.x > 0 && outputCircle.centre.y > 0 && outputCircle.maxRadius > 0){
         circleExist = true;
         circle(rawImage, outputCircle.centre, outputCircle.maxRadius, CV_RGB(255, 255, 255), 2);
-		zPos = -1;
 
         // Locate z-Position for goal circle
         for(int j=0; j<pointCount; j++){
             // Test every points if they are on circle
             int dY = pow((whitePoints[0][j] - outputCircle.centre.y), 2);
             int dX = pow((whitePoints[1][j] - outputCircle.centre.x), 2);
-            if(abs(dX + dY - pow(outputCircle.maxRadius, 2)) < 15){
+            if(abs(dX + dY - pow(outputCircle.maxRadius, 2)) < 50){
                 int tempPosition = int(rodImage.at<IMAGE_FORMAT>(whitePoints[0][j], whitePoints[1][j]));
                 if(tempPosition > zPos)
                     zPos = tempPosition;
@@ -491,16 +490,11 @@ void goalDetection(){
 			cout << "Intersection-2: " << intersect2 << endl;
 
             // Interpolate z-distance value
-            double twoPointDistance, intersect1DistanceSum, intersect2DistanceSum;
+            double twoPointDistance;
             // Check the solutions are within line segments or not
             twoPointDistance = sqrt(pow(ballPath[recordedPos - 1].ballCentre.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(ballPath[recordedPos - 1].ballCentre.y - ballPath[recordedPos - 2].ballCentre.y, 2));
-            // If distance of new point with two points is larger than distance of two points
-            intersect1DistanceSum = sqrt(pow(intersect1.x - ballPath[recordedPos - 1].ballCentre.x, 2) + pow(intersect1.y - ballPath[recordedPos - 1].ballCentre.y, 2))
-                                  + sqrt(pow(intersect1.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(intersect1.y - ballPath[recordedPos - 2].ballCentre.y, 2));
-            intersect2DistanceSum = sqrt(pow(intersect2.x - ballPath[recordedPos - 1].ballCentre.x, 2) + pow(intersect2.y - ballPath[recordedPos - 1].ballCentre.y, 2))
-                                  + sqrt(pow(intersect2.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(intersect2.y - ballPath[recordedPos - 2].ballCentre.y, 2));
-            
-            // Return only points lied within line segments
+
+			// Return only points lied within line segments
             int zDiff = ballPath[recordedPos - 2].zDistance - ballPath[recordedPos - 1].zDistance;
             double distanceWithPoint1 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect1.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect1.y, 2));
             double intersect1_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint1 / twoPointDistance;
@@ -511,20 +505,13 @@ void goalDetection(){
 			
 			// z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
             cout << "Rod Position: " << zPos << endl;
-			cout << "Two Points Distance: " << twoPointDistance << endl;
-			cout << "Two Points with intersect 1 Distance: " << intersect1DistanceSum << endl;
-			cout << "Two Points with intersect 2 Distance: " << intersect2DistanceSum << endl;
-			if (fabs(intersect1DistanceSum - twoPointDistance) < threshold) {
-				if (intersect1_z < zPos && zPos < intersect2_z) {
-					cout << "Cause by one point to return goal" << endl;
-					result = true;
-				}
+			if (intersect1_z < zPos && zPos < intersect2_z) {
+				cout << "Cause by one point to return goal" << endl;
+				result = true;
 			}
-			else if (fabs(intersect2DistanceSum - twoPointDistance) < threshold) {
-				if (intersect2_z < zPos && zPos < intersect1_z) {
-					cout << "Cause by one point to return goal" << endl;
-					result = true;
-				}
+			else if (intersect2_z < zPos && zPos < intersect1_z) {
+				cout << "Cause by one point to return goal" << endl;
+				result = true;
 			}
         }
     }
