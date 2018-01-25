@@ -389,6 +389,7 @@ void goalDetection(){
     double threshold = 0.1;
     int pointCount = 0;
     intersectionPoint *pointsOnLine = new intersectionPoint[3];
+    // Case 1: Get two intersection points for path
     for(int i=1; i<recordedPos; i++){
         // The ball should fly with increasing z-distance
         // cout << ballPath[i].zDistance << endl;
@@ -448,7 +449,6 @@ void goalDetection(){
                 pointCount += 1;
             }
         }
-
     }
 
     if(pointCount < 2)
@@ -465,6 +465,57 @@ void goalDetection(){
         cout << "Rod Position: " << zPos << endl;
         if(pointsOnLine[0].z_interpolation < zPos && zPos < pointsOnLine[1].z_interpolation)
             result = true;
+    }
+
+    // Case 2: Get only one intersection points for path
+    if(result == false){
+        double lineSlope, lineIntercept, aCoefficient, bCoefficient, cCoefficient, delta;
+		if (ballPath[recordedPos - 1].ballCentre.x - ballPath[recordedPos - 2].ballCentre.x == 0)
+			return;
+        lineSlope = (ballPath[recordedPos - 1].ballCentre.y - ballPath[recordedPos - 2].ballCentre.y) / (ballPath[recordedPos - 1].ballCentre.x - ballPath[recordedPos - 2].ballCentre.x);
+        lineIntercept = -1 * lineSlope * ballPath[recordedPos - 2].ballCentre.x + ballPath[recordedPos - 2].ballCentre.y;
+        aCoefficient = 1 + pow(lineSlope, 2);
+        bCoefficient = 2.0 * lineSlope * (lineIntercept - outputCircle.centre.y) - 2.0 * outputCircle.centre.x;
+        cCoefficient = pow(outputCircle.centre.x, 2) + pow(lineIntercept - outputCircle.centre.y, 2) - pow(outputCircle.maxRadius, 2);
+
+        delta = pow(bCoefficient, 2) - 4.0 * aCoefficient * cCoefficient;
+        if(delta >= 0){
+            cv::Point2d intersect1, intersect2;
+            // Retrieve two intersection points
+            intersect1.x = (-1 * bCoefficient + sqrt(delta)) / (2.0 * aCoefficient);
+            intersect1.y = lineSlope * intersect1.x + lineIntercept;
+            intersect2.x = (-1 * bCoefficient - sqrt(delta)) / (2.0 * aCoefficient);
+            intersect2.y = lineSlope * intersect2.x + lineIntercept;
+
+            // Interpolate z-distance value
+            double twoPointDistance, intersect1DistanceSum, intersect2DistanceSum;
+            // Check the solutions are within line segments or not
+            twoPointDistance = sqrt(pow(ballPath[recordedPos - 1].ballCentre.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(ballPath[recordedPos - 1].ballCentre.y - ballPath[recordedPos - 2].ballCentre.y, 2));
+            // If distance of new point with two points is larger than distance of two points
+            intersect1DistanceSum = sqrt(pow(intersect1.x - ballPath[recordedPos - 1].ballCentre.x, 2) + pow(intersect1.y - ballPath[recordedPos - 1].ballCentre.y, 2))
+                                  + sqrt(pow(intersect1.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(intersect1.y - ballPath[recordedPos - 2].ballCentre.y, 2));
+            intersect2DistanceSum = sqrt(pow(intersect2.x - ballPath[recordedPos - 1].ballCentre.x, 2) + pow(intersect2.y - ballPath[recordedPos - 1].ballCentre.y, 2))
+                                  + sqrt(pow(intersect2.x - ballPath[recordedPos - 2].ballCentre.x, 2) + pow(intersect2.y - ballPath[recordedPos - 2].ballCentre.y, 2));
+            
+            // Return only points lied within line segments
+            int zDiff = ballPath[recordedPos - 2].distance - ballPath[recordedPos - 1].distance;
+            double distanceWithPoint1 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect1.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect1.y, 2));
+            double intersect1_z = ballPath[recordedPos - 2].distance - zDiff * distanceWithPoint1 / twoPointDistance;
+            double distanceWithPoint2 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect2.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect2.y, 2));
+            double intersect2_z = ballPath[recordedPos - 2].distance - zDiff * distanceWithPoint2 / twoPointDistance;
+            // z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
+            cout << "Rod Position: " << zPos << endl;
+            if(fabs(intersect1DistanceSum - twoPointDistance) < threshold)
+                if(intersect1_z < zPos && zPos < intersect2_z){
+                    cout << "Cause by one point to return goal" << endl;
+                    result = true;
+                }
+            else if(fabs(intersect2DistanceSum - twoPointDistance) < threshold)
+                if(intersect1_z < zPos && zPos < intersect2_z){
+                    cout << "Cause by one point to return goal" << endl;
+                    result = true;
+                }
+        }
     }
 
     // Put text on displayed image
