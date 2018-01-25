@@ -501,19 +501,13 @@ void ballFilter(){
     //     drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
 
     if(contours.size() > 0){
-        // Get moments of contours
-        vector<Moments> moment(contours.size());
-        for(int i = 0; i < contours.size(); i++)
-            moment[i] = moments(contours[i], false);
-
-        // Get mass centre of contours
-        vector<Point2f> massCentre(contours.size());
-        int massCentreCounter = 0;
+        vector<RotatedRect> minEllipse(contours.size());
+        // Get minimum ellipse of contours
         for(int i = 0; i < contours.size(); i++){
-            if(moment[i].m00 > 0){
-                massCentre[massCentreCounter] = Point2f(moment[i].m10/moment[i].m00, moment[i].m01/moment[i].m00);
-                massCentreCounter += 1;
-            }
+            minEllipse[i] = fitEllipse(Mat(contours[i]));
+            cout << "minimum enclosing ellipse: " << minEllipse[i].center << endl;
+            cv::line(rawImage, cv::Point(minEllipse[i].center.x - 5, minEllipse[i].center.y), cv::Point(minEllipse[i].center.x + 5, minEllipse[i].center.y), Scalar(255, 255, 0), 2);
+            cv::line(rawImage, cv::Point(minEllipse[i].center.x, minEllipse[i].center.y - 5), cv::Point(minEllipse[i].center.x, minEllipse[i].center.y + 5), Scalar(255, 255, 0), 2);
         }
         
         // Draw centre on image
@@ -637,6 +631,7 @@ int main(int argc, char** argv){
 
 			// Change here if using raw 16 bits
 			imageDisplay.copyTo(rawImage);
+            cvtColor(rawImage, rawImage, COLOR_GRAY2BGR);
             imageDisplay.copyTo(rodImage);
 			imageDisplay.copyTo(imageForBall);
 
