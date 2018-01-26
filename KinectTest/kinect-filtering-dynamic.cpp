@@ -59,7 +59,7 @@ const int maxDepthRange = 8000;
 const int rodLength = 35;
 const int rodWidth = 7;
 
-const int medianBlurValue = 4;
+const int medianBlurValue = 5;
 const int cannyLower = 10;
 const int cannyUpper = 150;
 
@@ -496,6 +496,10 @@ void goalDetection(){
 
 			// Return only points lied within line segments
             int zDiff = ballPath[recordedPos - 2].zDistance - ballPath[recordedPos - 1].zDistance;
+			cout << "Point-1: " << ballPath[recordedPos - 2].ballCentre << endl;
+			cout << "Point-2: " << ballPath[recordedPos - 1].ballCentre << endl;
+			cout << "Point1-z: " << ballPath[recordedPos - 2].zDistance << endl;
+			cout << "Point2-z: " << ballPath[recordedPos - 1].zDistance << endl;
             double distanceWithPoint1 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect1.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect1.y, 2));
             double intersect1_z = ballPath[recordedPos - 2].zDistance - zDiff * distanceWithPoint1 / twoPointDistance;
             double distanceWithPoint2 = sqrt(pow(ballPath[recordedPos - 2].ballCentre.x - intersect2.x, 2) + pow(ballPath[recordedPos - 2].ballCentre.y - intersect2.y, 2));
@@ -505,11 +509,11 @@ void goalDetection(){
 			
 			// z-value: pointsOnLine[0].z_interpolation < zPos < pointsOnLine[1].z_interpolation
             cout << "Rod Position: " << zPos << endl;
-			if (intersect1_z < zPos && zPos < intersect2_z) {
+			if (floor(intersect1_z) <= zPos && zPos <= ceil(intersect2_z)) {
 				cout << "Cause by one point to return goal" << endl;
 				result = true;
 			}
-			else if (intersect2_z < zPos && zPos < intersect1_z) {
+			else if (floor(intersect2_z) <= zPos && zPos <= ceil(intersect1_z)) {
 				cout << "Cause by one point to return goal" << endl;
 				result = true;
 			}
@@ -530,6 +534,7 @@ void goalDetection(){
 
 void ballFilter(){
     cv::Mat cannyEdge, temp;
+	int areaThreshold = 30;
     vector<vector<cv::Point> > contours;
     vector<Vec4i> hierarchy;
 
@@ -555,7 +560,7 @@ void ballFilter(){
     int maxContour = 0;
     Scalar color(255, 0, 0);
     for(int i = 0; i < contours.size(); i++){ // Iterate through each contour
-		if (contourArea(contours[i]) > 150) {
+		if (contourArea(contours[i]) > areaThreshold) {
 			drawContours(rawImage, contours, i, color, CV_FILLED, 8, hierarchy);
 			cout << "Area: " << contourArea(contours[i]) << endl;
 		}
@@ -572,7 +577,7 @@ void ballFilter(){
 		vector<float>radius(contours.size());
         // Get minimum ellipse of contours
         for(int i = 0; i < contours.size(); i++){
-			if (contourArea(contours[i]) > 150) {
+			if (contourArea(contours[i]) > areaThreshold) {
 				approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);
 				boundRect[i] = boundingRect(Mat(contours_poly[i]));
 				minEnclosingCircle((Mat)contours_poly[i], center[i], radius[i]);
@@ -587,14 +592,14 @@ void ballFilter(){
         // Record current first point to vector array
 		if (center[maxContour].x > 0 && center[maxContour].y > 0 && recordedPos < 20) {
 			ballPath[recordedPos].ballCentre = center[maxContour];
-			ballPath[recordedPos].zDistance = (int)imageForBall.at<__int8>(int(center[maxContour].y), int(center[maxContour].x));
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(center[maxContour].y), int(center[maxContour].x));
 			recordedPos += 1;
 			detectedBall = 1;
 		}
 		else if (recordedPos == 20 && center[maxContour].x > 0 && center[maxContour].y > 0) {
 			recordedPos = 0;
 			ballPath[recordedPos].ballCentre = center[maxContour];
-			ballPath[recordedPos].zDistance = (int)imageForBall.at<__int8>(int(center[maxContour].y), int(center[maxContour].x));
+			ballPath[recordedPos].zDistance = (int)imageForBall.at<IMAGE_FORMAT>(int(center[maxContour].y), int(center[maxContour].x));
 			recordedPos += 1;
 			detectedBall = 1;
 		}
